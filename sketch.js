@@ -1,6 +1,7 @@
 //Initialize grid setup
 let nRows = 25;
 let nCols = 25;
+let path;
 let pathLength;
 let gridFull = pathLength == nRows* nCols;
 let totalWidth = window.innerWidth;
@@ -12,6 +13,7 @@ function setup()
   let canvas = createCanvas(totalWidth, totalHeight);
   background(000);
   grid = setupGrid(nRows, nCols);
+  path = "";
   pathLength = 0;
 }
 function setupGrid(r, c)
@@ -60,7 +62,17 @@ function findPermutations(A)
   return ret;
 }
 
-function searchOptions()
+/*
+Returns an array that contains the index of a valid grid spot, its xy
+coordinates and the name of the direction that spot is in. 
+The parameter 'currentIndex' is the index of the spot whose options need to
+be analyzed.
+The parameter 'currentPath' is a version of the path that is being looked at
+in order to check for possible terminal strings. This can be the 
+complete path (if the movement is not a failure) or a sub-path in the 
+case where the path needs to find an altenate route.
+*/
+function searchOptions(currentIndex, currentPath)
 {
   //Search indices of neighbours, then get the grid coordinates
   let up = index - nCols;
@@ -83,19 +95,55 @@ function searchOptions()
           if(grid[newIndex] == true)
             {
               if(!isAdjacent(newIndex)) continue;
+              //Direction is valid
               let y = floor(newIndex/nRows);
               let x = newIndex % nCols;
-              return [newIndex, y, x];
+              let dir;
+              switch(newIndex)
+              {
+                case up:
+                  dir = "u";
+                  break;
+                case dw:
+                  dir = "d";
+                  break;
+                case right:
+                  dir = "r";
+                  break;
+                case left:
+                  dir = "l";
+                  break;
+                default:
+                  dir = "none";
+                  return [-1, -1, -1, "none"];
+              }
+              if(isTerminalString(currentPath, dir)) continue;
+              return [newIndex, y, x, dir];
             }           
         }
 
     }
   //Terminal case -- stuck
-  return [-1, -1, -1];
+  return [-1, -1, -1, "none"];
 }
+
+/*
+  Checks whether an added movement to the path would result in
+  an already-known failure.
+*/
+function isTerminalString(currentPath, dir)
+{
+  for(let i = 0; i < terminalstr.length; i++)
+  {
+    if(currentPath.concat("", dir) == terminalstr[i])
+      return true;
+  }
+  return false;
+}
+
 function draw() 
 {
-  frameRate(1);
+  frameRate(10);
   
   strokeWeight(pointCons);
   stroke('white');
@@ -121,26 +169,37 @@ function draw()
       pathLength = 1;
     }
   console.log('Current position: ' + index + '\tPath length: '+pathLength);
-  let fetch = searchOptions();
-  let prev_y = 2*yOffset*gridY + yOffset
-  let prev_x = 2*xOffset*gridX+xOffset;
-  index = fetch[0];
-  gridY = fetch[1];
-  gridX = fetch[2];
-  let y = 2*yOffset*gridY + yOffset;
-  let x = 2*xOffset*gridX+xOffset;
-  if(index == -1 || gridY == -1 || gridX == -1)
-    {
-      console.log("I'm stuck!");
-      noLoop();
-    }
+  /*
+    Fetch retrieves a valid direction to move into.
+    If the walk is stuck, the values in fetch will be -1.
+  */
+  let fetch = searchOptions(index, path);
+  let dir = fetch[3];
+  if(dir == "none")
+  {
+    console.log("I'm stuck!");
+    fetch = pathfinder(path.slice(0, pathLength-2), path.charAt(pathLength-2), index, 0);
+    //noLoop();
+  }
   else
-    {
+  {
+    let prev_y = 2*yOffset*gridY + yOffset;
+    let prev_x = 2*xOffset*gridX + xOffset;
+    index = fetch[0];
+    gridY = fetch[1];
+    gridX = fetch[2];
+    
+    let y = 2*yOffset*gridY + yOffset;
+    let x = 2*xOffset*gridX + xOffset;
+
     grid[index] = false;
+    pathLength++;
+    path = path.concat("", dir);
+    console.log(path); //Test console log
     strokeWeight(lineCons);
     line(prev_x, prev_y, x, y);
     strokeWeight(pointCons);
     point(x, y);
-    pathLength++;
-    }
+  }
+  
 }
