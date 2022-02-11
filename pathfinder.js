@@ -75,7 +75,7 @@ function pathfinder(currentPath, fail, currentIndex, depth)
         'l': false,
         'r': false
     }
-    let fetch = searchOptions();
+    let fetch = searchOptions(currentIndex, currentPath);
     while(pathNotFound)
     { 
         //if either option ends up in a known failure, skip to next option
